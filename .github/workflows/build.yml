@@ -29,7 +29,7 @@ jobs:
           find plugin_app/app/src/main/jniLibs/ -name *.so -not -name libminitar.so | while IFS= read -r file; do rm "${file}"; done
 
           # debug key build
-          patch --strip=1 --directory=plugin_app --input="${PWD}/patches/android10essentials_app_debugkey.patch"
+          patch --strip=1 --directory=plugin_app --input="${GITHUB_WORKSPACE}/patches/android10essentials_app_debugkey.patch"
           wget https://github.com/termux/termux-app/raw/master/app/testkey_untrusted.jks -O plugin_app/app/testkey_untrusted.jks
 
           OUTPUT_DIR=build;

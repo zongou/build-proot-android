@@ -1,0 +1,18 @@
+diff --git a/src/path/temp.c b/src/path/temp.c
+index 8d8aa63..9569240 100644
+--- a/src/path/temp.c
++++ b/src/path/temp.c
+@@ -23,6 +23,13 @@ const char *get_temp_directory()
+ 		return temp_directory;
+ 
+ 	temp_directory = getenv("PROOT_TMP_DIR");
++	if (temp_directory == NULL) {
++		temp_directory = getenv("TMPDIR"); // Try TMPDIR
++		if (temp_directory == NULL) {
++			temp_directory = P_tmpdir;
++		}
++	}
++
+ 	if (temp_directory == NULL) {
+ 		temp_directory = P_tmpdir;
+ 	}

@@ -1,0 +1,70 @@
+name: Build PRoot
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v3.12.0
+        with:
+          java-version: 17
+          distribution: adopt-hotspot
+
+      - name: Build PRoot
+        run: |
+          ./get_src.sh
+          ./build_talloc.sh
+          ./build_proot.sh
+
+      - name: Build Apk
+        run: |
+          git clone https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials.git plugin_app
+
+          # remove previous lib
+          find plugin_app/app/src/main/jniLibs/ -name *.so -not -name libminitar.so | while IFS= read -r file; do rm "${file}"; done
+
+          # debug key build
+          patch --strip=1 --directory=plugin_app --input="${PWD}/patches/android10essentials_app_debugkey.patch"
+          wget https://github.com/termux/termux-app/raw/master/app/testkey_untrusted.jks -O plugin_app/app/testkey_untrusted.jks
+
+          OUTPUT_DIR=build;
+          APK_LIB_DIR="plugin_app/app/src/main/jniLibs";
+
+          # copy built binaries
+          build_arch_to_apk_arch() {
+              case $1 in
+              arm64) echo arm64-v8a ;;
+              arm) echo armeabi-v7a ;;
+              x86_64) echo $1 ;;
+              x86) echo x86 ;;
+              esac
+          }
+
+          for ARCH in arm64 arm x86_64 x86; do
+                  cp "${OUTPUT_DIR}/root-${ARCH}/root-apk/bin"/* "${APK_LIB_DIR}/$(build_arch_to_apk_arch "$ARCH")"
+          done
+
+          cd plugin_app
+          ./gradlew build
+
+      - name: Archive PRoot binaries
+        working-directory: build
+        run: |
+          tar -c root-* | gzip > proot-android.tar.gz
+
+      - name: Upload Apk
+        uses: actions/upload-artifact@v3
+        with:
+          name: AnotherTermShellPlugin-Android10Essentials
+          path: plugin_app/app/build/outputs/apk/release
+
+      - name: Upload PRoot
+        uses: actions/upload-artifact@v3
+        with:
+          name: proot-android
+          path: build/proot-android.tar.gz

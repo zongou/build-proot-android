@@ -1,0 +1,134 @@
+diff --git a/src/GNUmakefile b/src/GNUmakefile
+index f1c0a44..306afe1 100644
+--- a/src/GNUmakefile
++++ b/src/GNUmakefile
+@@ -91,8 +91,13 @@ endef
+ $(eval $(call define_from_arch.h,,HAS_LOADER_32BIT))
+ $(eval $(call define_from_arch.h,,HAS_POKEDATA_WORKAROUND))
+ 
++PROOT_UNBUNDLE_LOADER_NAME ?= loader
++PROOT_UNBUNDLE_LOADER_NAME_32 ?= loader32
++
+ ifdef PROOT_UNBUNDLE_LOADER
+-  CFLAGS += "-DPROOT_UNBUNDLE_LOADER=\"$(PROOT_UNBUNDLE_LOADER)\""
++  CFLAGS += "-DPROOT_UNBUNDLE_LOADER=\"$(PROOT_UNBUNDLE_LOADER)\"" \
++            "-DPROOT_UNBUNDLE_LOADER_NAME=\"$(PROOT_UNBUNDLE_LOADER_NAME)\"" \
++            "-DPROOT_UNBUNDLE_LOADER_NAME_32=\"$(PROOT_UNBUNDLE_LOADER_NAME_32)\""
+ proot: | loader/loader
+ ifdef HAS_LOADER_32BIT
+ proot: | loader/loader-m32
+@@ -159,7 +164,7 @@ build.h: $(CHECK_RESULTS)
+ 	$(Q)echo "/* This file is auto-generated, edit at your own risk.  */" > $@
+ 	$(Q)echo "#ifndef BUILD_H"      >> $@
+ 	$(Q)echo "#define BUILD_H"      >> $@
+-	$(Q)sh -c '$(CHECK_VERSION)'    >> $@
++	# $(Q)sh -c '$(CHECK_VERSION)'    >> $@
+ 	$(Q)cat $^                      >> $@
+ 	$(Q)echo "#endif /* BUILD_H */" >> $@
+ 
+@@ -250,6 +255,7 @@ DEPS = $(OBJECTS:.o=.d) $(LOADER_OBJECTS:.o=.d) $(LOADER-m32_OBJECTS:.o=.d) $(CH
+ 
+ PREFIX ?= /usr/local
+ BINDIR ?= $(PREFIX)/bin
++LOADERDIR ?= $(BINDIR)/$(PROOT_UNBUNDLE_LOADER)
+ 
+ .PHONY: clean distclean install uninstall
+ clean distclean:
+@@ -258,9 +264,9 @@ clean distclean:
+ install: proot
+ 	$($(quiet)INSTALL) -D $< $(DESTDIR)$(BINDIR)/$<
+ ifdef PROOT_UNBUNDLE_LOADER
+-	$(INSTALL) -D loader/loader $(PROOT_UNBUNDLE_LOADER)/loader
++	$(INSTALL) -D loader/loader $(LOADERDIR)/$(PROOT_UNBUNDLE_LOADER_NAME)
+ ifdef HAS_LOADER_32BIT
+-	$(INSTALL) -D loader/loader-m32 $(PROOT_UNBUNDLE_LOADER)/loader32
++	$(INSTALL) -D loader/loader-m32 $(LOADERDIR)/$(PROOT_UNBUNDLE_LOADER_NAME_32)
+ endif
+ endif
+ 
+diff --git a/src/execve/enter.c b/src/execve/enter.c
+index c562d14..af24bda 100644
+--- a/src/execve/enter.c
++++ b/src/execve/enter.c
+@@ -555,6 +555,28 @@ end:
+ }
+ #endif
+ 
++static inline const char *where_am_i(const char *const postfix)
++{
++	char buf[PATH_MAX + 1];
++	const ssize_t r = readlink("/proc/self/exe", buf, sizeof(buf));
++	if (r < 0 || r >= sizeof(buf)) return NULL;
++	buf[r] = '\0';
++	char *p = strrchr(buf, '/');
++	if (p == NULL) return NULL;
++	p++;
++	const size_t postfix_len = strlen(postfix);
++	if (buf + sizeof(buf) - p < postfix_len + 1) return NULL;
++	memcpy(p, postfix, postfix_len + 1);
++	return talloc_strdup(talloc_autofree_context(), buf);
++}
++
++static inline const char *resolve_path(const char *const path)
++{
++	if (path == NULL) return NULL;
++	if (path[0] == '/') return path;
++	return where_am_i(path);
++}
++
+ /**
+  * Get the path to the loader for the given @tracee.  This function
+  * returns NULL if an error occurred.
+@@ -562,12 +584,22 @@ end:
+ static inline const char *get_loader_path(const Tracee *tracee)
+ {
+ #if defined(PROOT_UNBUNDLE_LOADER)
++
++#ifndef PROOT_UNBUNDLE_LOADER_NAME
++#define PROOT_UNBUNDLE_LOADER_NAME "loader"
++#endif
++
+ #if defined(HAS_LOADER_32BIT)
++
++#ifndef PROOT_UNBUNDLE_LOADER_NAME_32
++#define PROOT_UNBUNDLE_LOADER_NAME_32 "loader32"
++#endif
++
+ 	if (IS_CLASS32(tracee->load_info->elf_header)) {
+-		return getenv("PROOT_LOADER_32") ?: PROOT_UNBUNDLE_LOADER "/loader32";
++		return resolve_path(getenv("PROOT_LOADER_32") ?: PROOT_UNBUNDLE_LOADER "/" PROOT_UNBUNDLE_LOADER_NAME_32);
+ 	}
+ #endif
+-	return getenv("PROOT_LOADER") ?: PROOT_UNBUNDLE_LOADER "/loader";
++	return resolve_path(getenv("PROOT_LOADER") ?: PROOT_UNBUNDLE_LOADER "/" PROOT_UNBUNDLE_LOADER_NAME);
+ #else
+ 	static char *loader_path = NULL;
+ 
+@@ -575,13 +607,13 @@ static inline const char *get_loader_path(const Tracee *tracee)
+ 	static char *loader32_path = NULL;
+ 
+ 	if (IS_CLASS32(tracee->load_info->elf_header)) {
+-		loader32_path = loader32_path ?: getenv("PROOT_LOADER_32") ?: extract_loader(tracee, true);
++		loader32_path = loader32_path ?: resolve_path(getenv("PROOT_LOADER_32")) ?: extract_loader(tracee, true);
+ 		return loader32_path;
+ 	}
+ 	else
+ #endif
+ 	{
+-		loader_path = loader_path ?: getenv("PROOT_LOADER") ?: extract_loader(tracee, false);
++		loader_path = loader_path ?: resolve_path(getenv("PROOT_LOADER")) ?: extract_loader(tracee, false);
+ 		return loader_path;
+ 	}
+ #endif
+diff --git a/src/extension/ashmem_memfd/ashmem_memfd.c b/src/extension/ashmem_memfd/ashmem_memfd.c
+index df3f3b5..f7277e3 100644
+--- a/src/extension/ashmem_memfd/ashmem_memfd.c
++++ b/src/extension/ashmem_memfd/ashmem_memfd.c
+@@ -13,6 +13,7 @@
+ #include "tracee/seccomp.h"
+ #include "syscall/chain.h"
+ #include "syscall/syscall.h" /* set_sysarg_data,  */
++#include <string.h>
+ 
+ enum AshmemMemfdChainState {
+ 	CS_IDLE,

@@ -1,0 +1,28 @@
+diff --git a/app/build.gradle b/app/build.gradle
+index 01bcd15..a5c3fde 100644
+--- a/app/build.gradle
++++ b/app/build.gradle
+@@ -14,6 +14,15 @@ android {
+         versionName "1.8"
+     }
+ 
++    signingConfigs {
++        config {
++            storeFile file('testkey_untrusted.jks')
++            keyAlias 'alias'
++            storePassword 'xrj45yWGLbsO7W0v'
++            keyPassword 'xrj45yWGLbsO7W0v'
++        }
++    }
++
+     applicationVariants.all { variant ->
+         variant.resValue "string", "applicationId", variant.applicationId
+     }
+@@ -27,6 +36,7 @@ android {
+             shrinkResources true
+             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                     'proguard-rules.pro'
++            signingConfig signingConfigs.config
+         }
+     }
+ }

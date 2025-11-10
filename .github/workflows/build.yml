@@ -58,13 +58,13 @@ jobs:
           tar -c root-* | gzip > proot-android.tar.gz
 
       - name: Upload Apk
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: AnotherTermShellPlugin-Android10Essentials
           path: plugin_app/app/build/outputs/apk/release
 
       - name: Upload PRoot
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: proot-android
           path: build/proot-android.tar.gz

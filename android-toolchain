@@ -49,11 +49,11 @@ main() {
         exit_error_msg "Usage: ./$(basename "$0") [patch] <path to the Android NDK> <Android SDK version> <target architecture>"
     fi
 
-    ANDROID_NDK_HOME="$1"
+    ANDROID_NDK_ROOT="$1"
     ANDROID_SDK_VERSION="$2"
     TARGET_ARCH="$3"
 
-    if ! test -d "${ANDROID_NDK_HOME}"; then
+    if ! test -d "${ANDROID_NDK_ROOT}"; then
         exit_error_msg "Invalid path to the Android NDK"
     fi
 
@@ -95,7 +95,7 @@ main() {
 
     HOST_OS="linux"
     HOST_ARCH="x86_64"
-    TOOLCHAIN=${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/${HOST_OS}-${HOST_ARCH}
+    TOOLCHAIN=${ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/${HOST_OS}-${HOST_ARCH}
 
     CC_host="$(command -v gcc)${HOST_M32}"
     CXX_host="$(command -v g++)${HOST_M32}"
@@ -114,7 +114,7 @@ main() {
     export OBJCOPY="${TOOLCHAIN}/bin/llvm-objcopy"
     export OBJDUMP="${TOOLCHAIN}/bin/llvm-objdump"
 
-    export CFLAGS=" -I${ANDROID_NDK_HOME}/sources/android/cpufeatures"
+    export CFLAGS=" -I${ANDROID_NDK_ROOT}/sources/android/cpufeatures"
 
     export GYP_DEFINES="\
     target_arch=${TARGET_ARCH} \
@@ -125,7 +125,7 @@ main() {
 
     # sub arch pre5, api 16, FILE_OFFSET_BITS="NO"
     # not configured to supporte pre5 yet
-    if test ${ANDROID_SDK_VERSION} -gt 16; then
+    if test "${ANDROID_SDK_VERSION}" -gt 16; then
         export FILE_OFFSET_BITS="OK"
     else
         export FILE_OFFSET_BITS="NO"

@@ -6,7 +6,7 @@ BUILD_DIR="${BASE_DIR}/build"
 mkdir -p "${BUILD_DIR}"
 cd "${BUILD_DIR}"
 
-curl -Lk https://www.samba.org/ftp/talloc/talloc-2.4.1.tar.gz | gzip -d | tar -x
+curl -Lk https://www.samba.org/ftp/talloc/talloc-2.4.3.tar.gz | gzip -d | tar -x
 curl -Lk https://github.com/termux/proot/archive/refs/heads/master.tar.gz | gzip -d | tar -x
 
 # Generate diff file

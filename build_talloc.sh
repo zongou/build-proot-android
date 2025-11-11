@@ -5,15 +5,13 @@ set -eu
 BASE_DIR="${PWD}"
 BUILD_DIR="${BASE_DIR}/build"
 
-: ${ANDROID_NDK_HOME:=/media/user/SAMSUNG_64GB/programs/android-ndk-r26}
-
 for ARCH in arm arm64 x86 x86_64; do
-	. ./android-toolchain "${ANDROID_NDK_HOME}" 24 "${ARCH}"
+	. ./android-toolchain "${ANDROID_NDK_ROOT}" 24 "${ARCH}"
 
 	INSTALL_ROOT="${BUILD_DIR}/root-${ARCH}/root"
 	STATIC_ROOT="${BUILD_DIR}/static-${ARCH}/root"
 
-	cd "${BUILD_DIR}/talloc-2.4.1"
+	cd "${BUILD_DIR}/talloc-2.4.3"
 
 	make distclean || true
 
@@ -27,7 +25,7 @@ rpath library support: OK
 -Wl,--version-script support: FAIL
 Checking getconf LFS_CFLAGS: OK
 Checking for large file support without additional flags: OK
-Checking for -D_FILE_OFFSET_BITS=64: $FILE_OFFSET_BITS
+Checking for -D_FILE_OFFSET_BITS=64: OK
 Checking for -D_LARGE_FILES: OK
 Checking correct behavior of strtoll: OK
 Checking for working strptime: OK

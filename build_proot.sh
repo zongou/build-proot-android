@@ -5,8 +5,6 @@ set -eu
 BASE_DIR="${PWD}"
 BUILD_DIR="${BASE_DIR}/build"
 
-: ${ANDROID_NDK_HOME:=/media/user/SAMSUNG_64GB/programs/android-ndk-r26}
-
 DEFAULT_CFLAGS="${CFLAGS-}"
 
 reset_env() {
@@ -19,7 +17,7 @@ reset_env() {
 
 for ARCH in arm arm64 x86 x86_64; do
 	# for ARCH in arm64; do
-	. ./android-toolchain "${ANDROID_NDK_HOME}" 24 "${ARCH}"
+	. ./android-toolchain "${ANDROID_NDK_ROOT}" 24 "${ARCH}"
 
 	INSTALL_ROOT="${BUILD_DIR}/root-${ARCH}/root"
 	STATIC_ROOT="${BUILD_DIR}/static-${ARCH}/root"

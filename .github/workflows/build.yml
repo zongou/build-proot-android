@@ -1,6 +1,15 @@
 name: Build PRoot
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+    # push:
+    #   paths: .github/workflows/code-server.yaml
+    inputs:
+      BuildApp:
+        description: "Build APP"
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -21,7 +30,19 @@ jobs:
           ./build_talloc.sh
           ./build_proot.sh
 
+      - name: Archive PRoot binaries
+        working-directory: build
+        run: |
+          tar -c root-* | gzip > proot-android.tar.gz
+
+      - name: Upload PRoot
+        uses: actions/upload-artifact@v4
+        with:
+          name: proot-android
+          path: build/proot-android.tar.gz
+
       - name: Build Apk
+        if: ${{ inputs.BuildApp }}
         run: |
           git clone https://github.com/green-green-avk/AnotherTermShellPlugin-Android10Essentials.git plugin_app
 
@@ -52,19 +73,9 @@ jobs:
           cd plugin_app
           ./gradlew build
 
-      - name: Archive PRoot binaries
-        working-directory: build
-        run: |
-          tar -c root-* | gzip > proot-android.tar.gz
-
       - name: Upload Apk
+        if: ${{ inputs.BuildApp }}
         uses: actions/upload-artifact@v4
         with:
           name: AnotherTermShellPlugin-Android10Essentials
           path: plugin_app/app/build/outputs/apk/release
-
-      - name: Upload PRoot
-        uses: actions/upload-artifact@v4
-        with:
-          name: proot-android
-          path: build/proot-android.tar.gz
